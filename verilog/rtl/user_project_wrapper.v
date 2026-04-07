@@ -85,40 +85,36 @@ module user_project_wrapper #(
 /* User project is instantiated  here   */
 /*--------------------------------------*/
 
-user_proj_example mprj (
-`ifdef USE_POWER_PINS
-	.vccd1(vccd1),	// User area 1 1.8V power
-	.vssd1(vssd1),	// User area 1 digital ground
-`endif
+// Wishbone to AES interface signals
+wire        aes_cs;
+wire        aes_we;
+wire [7:0]  aes_address;
+wire [31:0] aes_write_data;
+wire [31:0] aes_read_data;
 
-    .wb_clk_i(wb_clk_i),
-    .wb_rst_i(wb_rst_i),
+// Wishbone decode
+assign aes_cs         = wbs_cyc_i & wbs_stb_i;
+assign aes_we         = wbs_we_i;
+assign aes_address    = wbs_adr_i[7:0];
+assign aes_write_data = wbs_dat_i;
+assign wbs_dat_o      = aes_read_data;
+assign wbs_ack_o      = aes_cs;
 
-    // MGMT SoC Wishbone Slave
+// Tie off unused outputs
+assign user_irq    = 3'b0;
+assign la_data_out = 128'b0;
+assign io_out      = 0;
+assign io_oeb      = {`MPRJ_IO_PADS{1'b1}};
 
-    .wbs_cyc_i(wbs_cyc_i),
-    .wbs_stb_i(wbs_stb_i),
-    .wbs_we_i(wbs_we_i),
-    .wbs_sel_i(wbs_sel_i),
-    .wbs_adr_i(wbs_adr_i),
-    .wbs_dat_i(wbs_dat_i),
-    .wbs_ack_o(wbs_ack_o),
-    .wbs_dat_o(wbs_dat_o),
-
-    // Logic Analyzer
-
-    .la_data_in(la_data_in),
-    .la_data_out(la_data_out),
-    .la_oenb (la_oenb),
-
-    // IO Pads
-
-    .io_in ({io_in[37:30],io_in[7:0]}),
-    .io_out({io_out[37:30],io_out[7:0]}),
-    .io_oeb({io_oeb[37:30],io_oeb[7:0]}),
-
-    // IRQ
-    .irq(user_irq)
+// AES instantiation
+aes aes_inst (
+    .clk(wb_clk_i),
+    .reset_n(~wb_rst_i),
+    .cs(aes_cs),
+    .we(aes_we),
+    .address(aes_address),
+    .write_data(aes_write_data),
+    .read_data(aes_read_data)
 );
 
 endmodule	// user_project_wrapper
